@@ -15,7 +15,11 @@ int main()
     //window_class_desc.lpszMenuName = ;
     window_class_desc.lpszClassName = L"my_window_class";
     window_class_desc.hIconSm = LoadIcon(GetModuleHandle(nullptr), IDI_APPLICATION);
-    win32x::WindowClass window_class{ &window_class_desc };
+    win32x::WindowClass window_class{ &window_class_desc, GetModuleHandle(nullptr) };
+    win32x::WindowHandle window_handle
+    { 
+        WS_EX_OVERLAPPEDWINDOW, L"my_window_class", L"My Window", WS_OVERLAPPED, 300, 300, 1280, 720, nullptr, nullptr, GetModuleHandle(nullptr), nullptr
+    };
 
     return 0;
 }

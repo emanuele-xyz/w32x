@@ -1,6 +1,6 @@
 #pragma once
 
-#pragma warning(push, 0)
+#pragma warning(push)
 #pragma warning(disable : 5039)
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
@@ -16,7 +16,15 @@
 
 namespace win32x
 {
-    #pragma warning(push, 0)
+    #if defined(UNICODE)
+    using str = WCHAR*;
+    using cstr = const WCHAR*;
+    #else
+    using str = char*;
+    using cstr = const char*;
+    #endif
+
+    #pragma warning(push)
     #pragma warning(disable : 4820)
     struct Error
     {
@@ -30,18 +38,34 @@ namespace win32x
     class WindowClass
     {
     public:
-        WindowClass(const WNDCLASSEX* desc, HINSTANCE inst = GetModuleHandle(nullptr));
+        WindowClass(const WNDCLASSEX* desc, HINSTANCE inst);
         ~WindowClass() noexcept;
         WindowClass(const WindowClass&) = delete;
         WindowClass(WindowClass&&) noexcept = delete;
         WindowClass& operator=(const WindowClass&) = delete;
         WindowClass& operator=(WindowClass&&) noexcept = delete;
     private:
-        #if defined(UNICODE)
-        const WCHAR* m_name;
-        #else
-        const char* m_name;
-        #endif
+        cstr m_name;
         HINSTANCE m_inst;
+    };
+
+    class WindowHandle
+    {
+    public:
+        WindowHandle(DWORD stylex, cstr clss, cstr title, DWORD style, int x, int y, int w, int h, HWND parent, HMENU menu, HINSTANCE inst, void* p);
+        ~WindowHandle();
+        WindowHandle(const WindowHandle&) = delete;
+        WindowHandle(WindowHandle&&) noexcept = delete;
+        WindowHandle& operator=(const WindowHandle&) = delete;
+        WindowHandle& operator=(WindowHandle&&) noexcept = delete;
+    public:
+        #pragma warning(push)
+        #pragma warning(disable : 4514)
+        inline HWND GetHWND() const noexcept { return m_hwnd; }
+        #pragma warning(pop)
+
+        RECT GetClientRect() const;
+    private:
+        HWND m_hwnd;
     };
 }
