@@ -13,23 +13,33 @@ namespace win32x
         UnregisterClass(m_name, m_inst);
     }
 
-    WindowHandle::WindowHandle(DWORD stylex, cstr clss, cstr title, DWORD style, int x, int y, int w, int h, HWND parent, HMENU menu, HINSTANCE inst, void* p)
+    WindowHandle::WindowHandle(DWORD stylex, cstr clss, cstr title, DWORD style, Rect rect, HWND parent, HMENU menu, HINSTANCE inst, void* p)
         : m_hwnd{}
     {
-        #pragma warning(push)
-        #pragma warning(disable : 4311)
-        #pragma warning(disable : 4302)
+        LONG x{ rect.left };
+        LONG y{ rect.top };
+        LONG w{ rect.right - rect.left };
+        LONG h{ rect.bottom - rect.top };
         win32x_Check(m_hwnd = CreateWindowEx(stylex, clss, title, style, x, y, w, h, parent, menu, inst, p));
-        #pragma warning(pop)
     }
     WindowHandle::~WindowHandle()
     {
         DestroyWindow(m_hwnd);
     }
-    RECT WindowHandle::GetClientRect() const
+    Rect WindowHandle::GetClientRect() const
     {
-        RECT rect{};
-        win32x_Check(::GetClientRect(m_hwnd, &rect));
+        Rect rect{};
+        win32x_CheckHR(::GetClientRect(m_hwnd, &rect));
         return rect;
+    }
+
+    void ExecuteMessagePump() noexcept
+    {
+        MSG msg{};
+        while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
     }
 }

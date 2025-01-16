@@ -7,12 +7,16 @@
 #pragma warning(pop)
 
 #if defined(_DEBUG)
-#define win32x_Crash(result) do { if (!(SUCCEEDED(result))) { __debugbreak(); } } while (false) 
+#define win32x_Check(p) do { if (!(p)) { __debugbreak(); } } while (false) 
 #else
-#define win32x_Crash(result) do { if (!(SUCCEEDED(result))) { throw ::win32x::Error(__FILE__, __LINE__, result, ::GetLastError()) } } while (true)
+#define win32x_Check(p) do { if (!(p)) { throw ::win32x::CheckFail{__FILE__, __LINE__, #p}; } } while (false)
 #endif
 
-#define win32x_Check(p) win32x_Crash(p)
+#if defined(_DEBUG)
+#define win32x_CheckHR(result) do { if (auto __hres{ result }; !(SUCCEEDED(__hres))) { __debugbreak(); } } while (false) 
+#else
+#define win32x_CheckHR(result) do { if (auto __hres{ result }; !(SUCCEEDED(__hres))) throw ::win32x::CheckHRFail(__FILE__, __LINE__, __hres); } while (false)
+#endif
 
 namespace win32x
 {
@@ -26,14 +30,30 @@ namespace win32x
 
     #pragma warning(push)
     #pragma warning(disable : 4820)
-    struct Error
+    #pragma warning(disable : 4514)
+    struct CheckFail
     {
-        char* file;
+        const char* file;
+        int line;
+        const char* p;
+    };
+    struct CheckHRFail
+    {
+        CheckHRFail(const char* file, int line, HRESULT result) : file{ file }, line{ line }, result{ result }, code{ GetLastError() } {}
+
+        const char* file;
         int line;
         HRESULT result;
         DWORD code;
     };
     #pragma warning(pop)
+
+    struct Rect : public RECT
+    {
+        inline Rect(LONG left, LONG top, LONG right, LONG bottom) : RECT{ left, top, right, bottom } {}
+        inline Rect(LONG right, LONG bottom) : Rect{ 0, 0, right, bottom } {}
+        inline Rect() : Rect{ 0, 0, 0, 0 } {}
+    };
 
     class WindowClass
     {
@@ -52,20 +72,19 @@ namespace win32x
     class WindowHandle
     {
     public:
-        WindowHandle(DWORD stylex, cstr clss, cstr title, DWORD style, int x, int y, int w, int h, HWND parent, HMENU menu, HINSTANCE inst, void* p);
+        WindowHandle(DWORD stylex, cstr clss, cstr title, DWORD style, Rect rect, HWND parent, HMENU menu, HINSTANCE inst, void* p);
         ~WindowHandle();
         WindowHandle(const WindowHandle&) = delete;
         WindowHandle(WindowHandle&&) noexcept = delete;
         WindowHandle& operator=(const WindowHandle&) = delete;
         WindowHandle& operator=(WindowHandle&&) noexcept = delete;
     public:
-        #pragma warning(push)
-        #pragma warning(disable : 4514)
         inline HWND GetHWND() const noexcept { return m_hwnd; }
-        #pragma warning(pop)
-
-        RECT GetClientRect() const;
+        void Show(int command) const { win32x_CheckHR(ShowWindow(m_hwnd, command)); }
+        Rect GetClientRect() const;
     private:
         HWND m_hwnd;
     };
+
+    void ExecuteMessagePump() noexcept;
 }
